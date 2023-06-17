@@ -5,8 +5,11 @@ mod lsystem;
 mod renderer;
 
 fn main() {
-    let mut renderer = renderer::Renderer::new();
-    renderer.render();
+    // let mut renderer = renderer::Renderer::new();
+    // renderer.render();
 
-    // let sys = lsystem::DOLSystem::new();
+    let mut sys = lsystem::DOLSystem::new();
+    for i in 0..5 {
+        println!("{}", sys.get_step(i));
+    }
 }
