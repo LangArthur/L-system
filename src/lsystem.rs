@@ -1,30 +1,30 @@
 use std::collections::HashMap;
 
-// the simplest class of L-systems
-pub struct DOLSystem {
-    alphabet: String, // symbols available
+pub trait LSystem {
+    fn get_step(self: &mut Self, nbr_of_step: usize) -> String;
+}
+
+// quadratic Koch island from Mandelbrot’s book
+pub struct QuadraticKochIsland {
     axiom: String, // initial state
     rules: HashMap<char, String>, // rules to apply
 
     steps: Vec<String> // an history of the different steps
 }
 
-impl DOLSystem {
+impl QuadraticKochIsland {
     pub fn new() -> Self {
-        let axiom = "a".to_string();
+        let axiom = "F-F-F-F".to_string();
         Self {
-            alphabet: "ab".to_string(),
             axiom: axiom.clone(),
             rules: std::collections::HashMap::from([
-                ('a', "ab".to_string()),
-                ('b', "a".to_string()),
+                ('F', "F-F+F+FF-F-F+F".to_string()),
             ]),
-
             steps: Vec::<String>::new(),
         }
     }
 
-    fn generate(self: &mut Self, initial_step: String, nbr_of_step: usize) {
+    fn generate(&mut self, initial_step: String, nbr_of_step: usize) {
         if nbr_of_step <= 0 {
             return;
         }
@@ -39,8 +39,10 @@ impl DOLSystem {
         self.steps.push(new_step);
         self.generate(self.steps[self.steps.len() - 1].clone(), nbr_of_step - 1);
     }
+}
 
-    pub fn get_step(self: &mut Self, nbr_of_step: usize) -> String {
+impl LSystem for QuadraticKochIsland {
+    fn get_step(&mut self, nbr_of_step: usize) -> String {
         let generated_nbr_of_step = self.steps.len();
         if nbr_of_step == 0 {
             return self.axiom.clone();
