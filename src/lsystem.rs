@@ -14,11 +14,11 @@ pub struct QuadraticKochIsland {
 
 impl QuadraticKochIsland {
     pub fn new() -> Self {
-        let axiom = "F-F-F-F".to_string();
+        let axiom = "F".to_string();
         Self {
             axiom: axiom.clone(),
             rules: std::collections::HashMap::from([
-                ('F', "F-F+F+FF-F-F+F".to_string()),
+                ('F', "F[+F]F[-F][F]".to_string()),
             ]),
             steps: Vec::<String>::new(),
         }

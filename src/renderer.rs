@@ -27,6 +27,7 @@ pub struct Drawer {
     origin_position: Point2<f32>,
     angle: f32, // in radian
     origin_angle: f32,
+    states: Vec<DrawerState>,
 }
 
 impl Drawer {
@@ -36,6 +37,7 @@ impl Drawer {
             origin_position: position.clone(),
             angle,
             origin_angle: angle.clone(),
+            states: vec![], // this vector serve as a stack
         }
     }
 
@@ -43,6 +45,25 @@ impl Drawer {
         self.position = self.origin_position;
         self.angle = self.origin_angle;
     }
+
+    fn save_state(&mut self) {
+        self.states.push(DrawerState {
+            position: self.position,
+            angle: self.angle,
+        })
+    }
+
+    fn load_last_state(&mut self) {
+        if let Some(state) = self.states.pop() {
+            self.position = state.position;
+            self.angle = state.angle;
+        }
+    }
+}
+
+pub struct DrawerState {
+    position: Point2<f32>,
+    angle: f32, // in radian
 }
 
 pub struct Renderer {
@@ -57,19 +78,20 @@ impl Renderer {
         let mut renderer = Self {
             win: Window::new("L-System"),
             pen: Drawer::new(point![0.0, 0.0], 0.5 * PI),
-            dist: 10.0,
-            theta: PI / 2.0,
+            dist: 3.0,
+            theta: PI / 9.0,
         };
+
+        let win_dim = renderer.win.size();
+        renderer.pen.position = point![0.0, -(win_dim.y as f32 / 2.0)];
+        renderer.pen.origin_position = point![0.0, -(win_dim.y as f32 / 2.0)];
         renderer.win.set_light(Light::StickToCamera);
-        // NOTE: origine position for drawing plants
-        // let win_dim = renderer.win.size();
-        // renderer.pen.position = point![0.0, -(win_dim.y as f32 / 2.0)];
         renderer
     }
 
     pub fn render(&mut self) {
         let mut system = QuadraticKochIsland::new();
-        let sequence = system.get_step(2);
+        let sequence = system.get_step(7);
         while self.win.render() {
             self.draw(&sequence);
         }
@@ -84,7 +106,11 @@ impl Renderer {
                 'f' => self.move_pen(),
                 '+' => self.rotate(Rotation::ClockWise),
                 '-' => self.rotate(Rotation::AntiClockWise),
-                _ => {},
+                '[' => self.pen.save_state(),
+                ']' => self.pen.load_last_state(),
+                // skipping unknown characters but keeping it since
+                // they can be used for example in node rewriting.
+                _ => {}, 
             }
         }
     }
