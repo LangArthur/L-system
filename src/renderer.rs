@@ -1,12 +1,19 @@
 use std::f32::consts::PI;
+use std::fmt::Display;
+use std::fs::File;
+use std::io::Read;
 
 use na::{Point2, Point3, point};
 use kiss3d::window::Window;
 use kiss3d::light::Light;
 
-use crate::lsystem::{QuadraticKochIsland, LSystem};
+use crate::lsystem::LSystem;
+use crate::config;
 
-const COLOR: Point3<f32> = point![1.0f32, 0.0f32, 0.0f32];
+const CONFIG_FILE: &str = "config.yaml";
+
+const COLOR: Point3<f32> = point![0.85f32, 0.66f32, 0.23f32];
+// const BG_COLOR: Point3<f32> = point![1.0f32, 0.95f32, 0.83f32];
 
 pub enum Rotation {
     ClockWise,
@@ -22,10 +29,16 @@ impl Rotation {
     }
 }
 
+// drawer instance
 pub struct Drawer {
+    /// current position of the drawer
     position: Point2<f32>,
+    /// the position from which the drawer has started
     origin_position: Point2<f32>,
-    angle: f32, // in radian
+    /// orientation of the drawer
+    /// in radian
+    angle: f32,
+    /// the orientation from which the drawer started
     origin_angle: f32,
     states: Vec<DrawerState>,
 }
@@ -61,16 +74,38 @@ impl Drawer {
     }
 }
 
+/// a state which the drawer can reload
 pub struct DrawerState {
     position: Point2<f32>,
     angle: f32, // in radian
 }
 
+pub enum Error {
+    IOError(std::io::Error),
+    SerdeError(serde_yaml::Error),
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IOError(err) => write!(f, "{}", err),
+            Self::SerdeError(err) => write!(f, "{}", err),
+        }
+    }
+}
+
 pub struct Renderer {
+    /// active window
     win: Window,
+    /// the drawing object
     pen: Drawer,
+    /// size of each segment
     dist: f32,
-    theta: f32, // in radian
+    /// all models loaded from configuration
+    loaded_models: Vec<config::Model>,
+    /// angle change apply at each rotation
+    /// in radian
+    delta: f32,
 }
 
 impl Renderer {
@@ -78,23 +113,55 @@ impl Renderer {
         let mut renderer = Self {
             win: Window::new("L-System"),
             pen: Drawer::new(point![0.0, 0.0], 0.5 * PI),
-            dist: 3.0,
-            theta: PI / 9.0,
+            dist: 2.5,
+            loaded_models: Self::load_config()
+                .map_err(|err| eprintln!("Failed to read config: {}", err))
+                .unwrap_or_else(|_| vec![]),
+            delta: f32::default(),
         };
 
         let win_dim = renderer.win.size();
         renderer.pen.position = point![0.0, -(win_dim.y as f32 / 2.0)];
         renderer.pen.origin_position = point![0.0, -(win_dim.y as f32 / 2.0)];
         renderer.win.set_light(Light::StickToCamera);
+        renderer.win.set_background_color(1.0f32, 0.95f32, 0.83f32);
         renderer
     }
 
+    fn load_config() -> Result<Vec<config::Model>, Error> {
+        let file = File::open(CONFIG_FILE)
+            .map_err(|err| Error::IOError(err))?;
+        serde_yaml::from_reader(file)
+            .map_err(|err| Error::SerdeError(err))
+    }
+
     pub fn render(&mut self) {
-        let mut system = QuadraticKochIsland::new();
+        let mut system = self.load_system();
         let sequence = system.get_step(7);
         while self.win.render() {
             self.draw(&sequence);
         }
+    }
+
+    fn load_system(&mut self) -> LSystem {
+
+        let toto = config::Model {
+            axiom: "X".to_string(),
+            rules: std::collections::HashMap::from([
+                ('X', "F[+X]F[-X]+X".to_string()),
+                ('F', "FF".to_string()),
+            ]),
+            delta: 90.0
+        };
+        println!("{}", serde_yaml::to_string(&toto).unwrap());
+
+        let model = &self.loaded_models[0];
+        self.delta = model.delta;
+        // TODO: avoid copy here
+        LSystem::new(
+            model.axiom.clone(),
+            model.rules.clone(),
+        )
     }
 
     fn draw(&mut self, sequence: &String) {
@@ -133,6 +200,6 @@ impl Renderer {
     }
 
     fn rotate(&mut self, rotation: Rotation) {
-        self.pen.angle = (self.pen.angle + self.theta * rotation.value()) % (PI * 2.0);
+        self.pen.angle = (self.pen.angle + self.delta * rotation.value()) % (PI * 2.0);
     }
 }

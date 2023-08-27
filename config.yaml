@@ -1,0 +1,20 @@
+# TODO: make this config file readable to load different lsystem
+# TODO: check needed parameters
+
+axiom: X
+rules:
+  'X': F[+X]F[-X]+X
+  'F': FF
+delta: 20.0
+
+# quadratic_koch_island:
+#   axiom: "F-F-F-F"
+#   rules:
+#     - F: "F-F+F+FF-F-F+F"
+#   delta: 90
+
+# plant2:
+#   axiom: "F"
+#   rules:
+#   - F: "F[+F]F[-F][F]"
+#   delta: 20

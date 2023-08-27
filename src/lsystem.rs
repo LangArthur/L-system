@@ -1,25 +1,17 @@
 use std::collections::HashMap;
 
-pub trait LSystem {
-    fn get_step(self: &mut Self, nbr_of_step: usize) -> String;
-}
-
-// quadratic Koch island from Mandelbrot’s book
-pub struct QuadraticKochIsland {
+pub struct LSystem {
     axiom: String, // initial state
     rules: HashMap<char, String>, // rules to apply
 
-    steps: Vec<String> // an history of the different steps
+    steps: Vec<String>, // an history of the different steps
 }
 
-impl QuadraticKochIsland {
-    pub fn new() -> Self {
-        let axiom = "F".to_string();
+impl LSystem {
+    pub fn new(axiom: String, rules: HashMap<char, String>) -> Self {
         Self {
-            axiom: axiom.clone(),
-            rules: std::collections::HashMap::from([
-                ('F', "F[+F]F[-F][F]".to_string()),
-            ]),
+            axiom,
+            rules,
             steps: Vec::<String>::new(),
         }
     }
@@ -39,10 +31,8 @@ impl QuadraticKochIsland {
         self.steps.push(new_step);
         self.generate(self.steps[self.steps.len() - 1].clone(), nbr_of_step - 1);
     }
-}
 
-impl LSystem for QuadraticKochIsland {
-    fn get_step(&mut self, nbr_of_step: usize) -> String {
+    pub fn get_step(&mut self, nbr_of_step: usize) -> String {
         let generated_nbr_of_step = self.steps.len();
         if nbr_of_step == 0 {
             return self.axiom.clone();
