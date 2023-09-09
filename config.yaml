@@ -1,15 +1,15 @@
-plant1:
+bush:
   axiom: X
   rules:
     'X': F[+X]F[-X]+X
     'F': FF
   delta: 20.0
 
-plant2:
+gramineae:
   axiom: F
   rules:
     'F': F[+F]F[-F][F]
-  delta: 20
+  delta: 20.0
 
 # TODO: add central start point
 # - axiom: "F-F-F-F"

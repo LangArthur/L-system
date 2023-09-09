@@ -78,12 +78,16 @@ pub struct Renderer {
     /// size of each segment
     dist: f32,
     /// all models loaded from configuration
-    loaded_models: Vec<config::Model>,
+    loaded_configs: Vec<config::Model>,
+    /// cached generated lsystems
+    lsystem: HashMap<String, LSystem>,
     /// angle change apply at each rotation
     /// in radian
     delta: f32,
     /// current drawn model idx
     current_model_idx: usize,
+    /// current step you are at
+    current_step: usize,
 }
 
 impl Renderer {
@@ -92,11 +96,13 @@ impl Renderer {
             win: Window::new("L-System"),
             pen: Drawer::new(point![0.0, 0.0], 0.5 * PI),
             dist: 2.5,
-            loaded_models: Self::load_config()
+            loaded_configs: Self::load_config()
                 .map_err(|err| eprintln!("Failed to read config: {}", err))
                 .unwrap_or_else(|_| vec![]),
+            lsystem: HashMap::new(),
             delta: f32::default(),
             current_model_idx: 0,
+            current_step: 1,
         };
 
         let win_dim = renderer.win.size();
@@ -121,22 +127,34 @@ impl Renderer {
     }
 
     pub fn render(&mut self) {
-        let mut system = self.load_system();
+        let step = self.current_step;
+        let mut sequence = self.load_system().get_step(step);
         while self.win.render() {
-            let sequence = system.get_step(7);
             for event in self.win.events().iter() {
                 match event.value {
                     WindowEvent::Key(Key::Right, Action::Press, _) => {
-                        self.current_model_idx = (self.current_model_idx + 1) % self.loaded_models.len();
-                        system = self.load_system();
+                        self.current_model_idx = (self.current_model_idx + 1) % self.loaded_configs.len();
+                        let step = self.current_step;
+                        sequence = self.load_system().get_step(step);
                     }
                     WindowEvent::Key(Key::Left, Action::Press, _) => {
                         self.current_model_idx = if self.current_model_idx == 0 {
-                            self.loaded_models.len() - 1
+                            self.loaded_configs.len()
                         } else {
-                            self.current_model_idx - 1
-                        };
-                        system = self.load_system();
+                            self.current_model_idx
+                        } - 1;
+                        let step = self.current_step;
+                        sequence = self.load_system().get_step(step);
+                    }
+                    WindowEvent::Key(Key::Down, Action::Press, _) => {
+                        self.current_step = self.current_step - usize::from(self.current_step > 0);
+                        let step = self.current_step;
+                        sequence = self.load_system().get_step(step);
+                    }
+                    WindowEvent::Key(Key::Up, Action::Press, _) => {
+                        self.current_step = self.current_step + 1;
+                        let step = self.current_step;
+                        sequence = self.load_system().get_step(step);
                     }
                     _ => {},
                 }
@@ -145,14 +163,19 @@ impl Renderer {
         }
     }
 
-    fn load_system(&mut self) -> LSystem {
-        let model = &self.loaded_models[self.current_model_idx];
-        self.delta = model.delta;
-        // TODO: avoid copy here
-        LSystem::new(
-            model.axiom.clone(),
-            model.rules.clone(),
-        )
+    fn load_system(&mut self) -> &mut LSystem {
+        let model = &self.loaded_configs[self.current_model_idx];
+        self.delta = model.delta.to_radians();
+        if self.lsystem.contains_key(&model.name) {
+            self.lsystem.get_mut(&model.name).unwrap()
+        } else {
+            let new_system = LSystem::new(
+                model.axiom.clone(),
+                model.rules.clone(),
+            );
+            self.lsystem.insert(model.name.clone(), new_system);
+            self.lsystem.get_mut(&model.name).unwrap()
+        }
     }
 
     fn draw(&mut self, sequence: &String) {
