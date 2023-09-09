@@ -1,33 +1,23 @@
+use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::fmt::Display;
 use std::fs::File;
-use std::io::Read;
 
+use kiss3d::event::Action;
+use kiss3d::event::Key;
+use kiss3d::event::WindowEvent;
 use na::{Point2, Point3, point};
 use kiss3d::window::Window;
 use kiss3d::light::Light;
 
 use crate::lsystem::LSystem;
 use crate::config;
+use crate::math;
+use crate::error as lsysErr;
 
 const CONFIG_FILE: &str = "config.yaml";
 
 const COLOR: Point3<f32> = point![0.85f32, 0.66f32, 0.23f32];
 // const BG_COLOR: Point3<f32> = point![1.0f32, 0.95f32, 0.83f32];
-
-pub enum Rotation {
-    ClockWise,
-    AntiClockWise,
-}
-
-impl Rotation {
-    fn value(&self) -> f32 {
-        match self {
-            Self::ClockWise => 1.0,
-            Self::AntiClockWise => -1.0,
-        }
-    }
-}
 
 // drawer instance
 pub struct Drawer {
@@ -80,20 +70,6 @@ pub struct DrawerState {
     angle: f32, // in radian
 }
 
-pub enum Error {
-    IOError(std::io::Error),
-    SerdeError(serde_yaml::Error),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IOError(err) => write!(f, "{}", err),
-            Self::SerdeError(err) => write!(f, "{}", err),
-        }
-    }
-}
-
 pub struct Renderer {
     /// active window
     win: Window,
@@ -106,6 +82,8 @@ pub struct Renderer {
     /// angle change apply at each rotation
     /// in radian
     delta: f32,
+    /// current drawn model idx
+    current_model_idx: usize,
 }
 
 impl Renderer {
@@ -118,6 +96,7 @@ impl Renderer {
                 .map_err(|err| eprintln!("Failed to read config: {}", err))
                 .unwrap_or_else(|_| vec![]),
             delta: f32::default(),
+            current_model_idx: 0,
         };
 
         let win_dim = renderer.win.size();
@@ -128,34 +107,46 @@ impl Renderer {
         renderer
     }
 
-    fn load_config() -> Result<Vec<config::Model>, Error> {
+    fn load_config() -> Result<Vec<config::Model>, lsysErr::Error> {
         let file = File::open(CONFIG_FILE)
-            .map_err(|err| Error::IOError(err))?;
-        serde_yaml::from_reader(file)
-            .map_err(|err| Error::SerdeError(err))
+            .map_err(|err| lsysErr::Error::IOError(err))?;
+        let map: HashMap<String, config::Model> = serde_yaml::from_reader(file)
+            .map_err(|err| lsysErr::Error::SerdeError(err))?;
+        let mut vec = vec![];
+        for (name, mut model) in map {
+            model.name = name;
+            vec.push(model);
+        }
+        Ok(vec)
     }
 
     pub fn render(&mut self) {
         let mut system = self.load_system();
-        let sequence = system.get_step(7);
         while self.win.render() {
+            let sequence = system.get_step(7);
+            for event in self.win.events().iter() {
+                match event.value {
+                    WindowEvent::Key(Key::Right, Action::Press, _) => {
+                        self.current_model_idx = (self.current_model_idx + 1) % self.loaded_models.len();
+                        system = self.load_system();
+                    }
+                    WindowEvent::Key(Key::Left, Action::Press, _) => {
+                        self.current_model_idx = if self.current_model_idx == 0 {
+                            self.loaded_models.len() - 1
+                        } else {
+                            self.current_model_idx - 1
+                        };
+                        system = self.load_system();
+                    }
+                    _ => {},
+                }
+            }
             self.draw(&sequence);
         }
     }
 
     fn load_system(&mut self) -> LSystem {
-
-        let toto = config::Model {
-            axiom: "X".to_string(),
-            rules: std::collections::HashMap::from([
-                ('X', "F[+X]F[-X]+X".to_string()),
-                ('F', "FF".to_string()),
-            ]),
-            delta: 90.0
-        };
-        println!("{}", serde_yaml::to_string(&toto).unwrap());
-
-        let model = &self.loaded_models[0];
+        let model = &self.loaded_models[self.current_model_idx];
         self.delta = model.delta;
         // TODO: avoid copy here
         LSystem::new(
@@ -171,8 +162,8 @@ impl Renderer {
             match c {
                 'F' => self.draw_line(),
                 'f' => self.move_pen(),
-                '+' => self.rotate(Rotation::ClockWise),
-                '-' => self.rotate(Rotation::AntiClockWise),
+                '+' => self.rotate(math::Rotation::ClockWise),
+                '-' => self.rotate(math::Rotation::AntiClockWise),
                 '[' => self.pen.save_state(),
                 ']' => self.pen.load_last_state(),
                 // skipping unknown characters but keeping it since
@@ -199,7 +190,7 @@ impl Renderer {
         ];
     }
 
-    fn rotate(&mut self, rotation: Rotation) {
+    fn rotate(&mut self, rotation: math::Rotation) {
         self.pen.angle = (self.pen.angle + self.delta * rotation.value()) % (PI * 2.0);
     }
 }
