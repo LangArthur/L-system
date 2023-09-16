@@ -98,7 +98,7 @@ impl Renderer {
         let mut renderer = Self {
             win: Window::new("L-System"),
             pen: Drawer::new(point![0.0, 0.0], 0.5 * PI),
-            dist: 4.0,
+            dist: 50.0,
             loaded_configs: Self::load_config()
                 .map_err(|err| eprintln!("Failed to read config: {}", err))
                 .unwrap_or_else(|_| vec![]),
