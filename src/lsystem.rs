@@ -38,7 +38,7 @@ impl LSystem {
             return self.axiom.clone();
         }
         if generated_nbr_of_step > nbr_of_step {
-            self.steps[nbr_of_step].clone()
+            self.steps[nbr_of_step - 1].clone()
         } else {
             let initial_step = if generated_nbr_of_step == 0 {
                 self.axiom.clone()
