@@ -4,6 +4,7 @@ use std::fs::File;
 
 use kiss3d::event::Action;
 use kiss3d::event::Key;
+use kiss3d::event::Modifiers;
 use kiss3d::event::WindowEvent;
 use na::{Point2, Point3, point};
 use kiss3d::window::Window;
@@ -88,6 +89,8 @@ pub struct Renderer {
     current_model_idx: usize,
     /// current step you are at
     current_step: usize,
+    /// current sequence of character render
+    sequence: String,
 }
 
 impl Renderer {
@@ -95,7 +98,7 @@ impl Renderer {
         let mut renderer = Self {
             win: Window::new("L-System"),
             pen: Drawer::new(point![0.0, 0.0], 0.5 * PI),
-            dist: 2.5,
+            dist: 4.0,
             loaded_configs: Self::load_config()
                 .map_err(|err| eprintln!("Failed to read config: {}", err))
                 .unwrap_or_else(|_| vec![]),
@@ -103,8 +106,11 @@ impl Renderer {
             delta: f32::default(),
             current_model_idx: 0,
             current_step: 1,
+            sequence: "".to_string(),
         };
 
+        let step = renderer.current_step;
+        renderer.sequence = renderer.load_system().get_step(step);
         let win_dim = renderer.win.size();
         renderer.pen.position = point![0.0, -(win_dim.y as f32 / 2.0)];
         renderer.pen.origin_position = point![0.0, -(win_dim.y as f32 / 2.0)];
@@ -126,40 +132,48 @@ impl Renderer {
         Ok(vec)
     }
 
-    pub fn render(&mut self) {
-        let step = self.current_step;
-        let mut sequence = self.load_system().get_step(step);
-        while self.win.render() {
-            for event in self.win.events().iter() {
-                match event.value {
-                    WindowEvent::Key(Key::Right, Action::Press, _) => {
-                        self.current_model_idx = (self.current_model_idx + 1) % self.loaded_configs.len();
-                        let step = self.current_step;
-                        sequence = self.load_system().get_step(step);
-                    }
-                    WindowEvent::Key(Key::Left, Action::Press, _) => {
-                        self.current_model_idx = if self.current_model_idx == 0 {
-                            self.loaded_configs.len()
-                        } else {
-                            self.current_model_idx
-                        } - 1;
-                        let step = self.current_step;
-                        sequence = self.load_system().get_step(step);
-                    }
-                    WindowEvent::Key(Key::Down, Action::Press, _) => {
-                        self.current_step = self.current_step - usize::from(self.current_step > 0);
-                        let step = self.current_step;
-                        sequence = self.load_system().get_step(step);
-                    }
-                    WindowEvent::Key(Key::Up, Action::Press, _) => {
-                        self.current_step = self.current_step + 1;
-                        let step = self.current_step;
-                        sequence = self.load_system().get_step(step);
-                    }
-                    _ => {},
+    pub fn process_events(&mut self) {
+        for event in self.win.events().iter() {
+            match event.value {
+                WindowEvent::Key(Key::Right, Action::Press, _) => {
+                    self.current_model_idx = (self.current_model_idx + 1) % self.loaded_configs.len();
+                    let step = self.current_step;
+                    self.sequence = self.load_system().get_step(step);
                 }
+                WindowEvent::Key(Key::Left, Action::Press, _) => {
+                    self.current_model_idx = if self.current_model_idx == 0 {
+                        self.loaded_configs.len()
+                    } else {
+                        self.current_model_idx
+                    } - 1;
+                    let step = self.current_step;
+                    self.sequence = self.load_system().get_step(step);
+                }
+                WindowEvent::Key(Key::Down, Action::Press, _) => {
+                    self.current_step = self.current_step - usize::from(self.current_step > 0);
+                    let step = self.current_step;
+                    self.sequence = self.load_system().get_step(step);
+                }
+                WindowEvent::Key(Key::Up, Action::Press, _) => {
+                    self.current_step = self.current_step + 1;
+                    let step = self.current_step;
+                    self.sequence = self.load_system().get_step(step);
+                }
+                WindowEvent::Key(Key::Subtract, Action::Press, Modifiers::Shift) => {
+                    self.dist -= f32::from(self.dist > 0.0);
+                }
+                WindowEvent::Key(Key::Add, Action::Press, Modifiers::Shift) => {
+                    self.dist += 1.0;
+                }
+                _ => {},
             }
-            self.draw(&sequence);
+        }
+    }
+
+    pub fn render(&mut self) {
+        while self.win.render() {
+            self.process_events();
+            self.draw();
         }
     }
 
@@ -178,10 +192,11 @@ impl Renderer {
         }
     }
 
-    fn draw(&mut self, sequence: &String) {
+    fn draw(&mut self) {
         // reset pen position
         self.pen.reset();
-        for c in sequence.chars() {
+        let seq = self.sequence.clone(); // FIXME: find a way to remove this clone
+        for c in seq.chars() {
             match c {
                 'F' => self.draw_line(),
                 'f' => self.move_pen(),

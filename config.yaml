@@ -1,15 +1,35 @@
-bush:
+heather:
   axiom: X
   rules:
     'X': F[+X]F[-X]+X
     'F': FF
   delta: 20.0
 
-gramineae:
+wild_carrot:
   axiom: F
   rules:
     'F': F[+F]F[-F][F]
   delta: 20.0
+
+bush:
+  axiom: F
+  rules:
+    'F': FF-[-F+F+F]+[+F-F-F]
+  delta: 22.5
+
+graminae:
+  axiom: X
+  rules:
+    'X': F-[[X]+X]+F[+FX]-X
+    'F': FF
+  delta: 22.5
+
+test_plant:
+  axiom: X
+  rules:
+    'X': F[+XF]-[F[+FXF]]
+    'F': FF[+F]
+  delta: 22.5
 
 # TODO: add central start point
 # - axiom: "F-F-F-F"
