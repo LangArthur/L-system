@@ -24,4 +24,5 @@ Please find all keys linked to there respective actions:
 
 - Up / Down arrow: go to the next / previous step of the system.
 - Right / Left arrow: load the next system present in the config. (Warning: it can takes some time to render higher steps, please be patient)
-- Shift and + / -: increase / decrease the size of each segment (50 pixels by default).
+- Ctrl and + / -: increase / decrease the size of each segment (50 pixels by default).
+- Alt and + / -: increase / decrease the angle at each intersection.

@@ -103,7 +103,7 @@ impl Renderer {
                 .map_err(|err| eprintln!("Failed to read config: {}", err))
                 .unwrap_or_else(|_| vec![]),
             lsystem: HashMap::new(),
-            delta: f32::default(),
+            delta: 20.0_f32.to_radians(),
             current_model_idx: 0,
             current_step: 1,
             sequence: "".to_string(),
@@ -159,11 +159,21 @@ impl Renderer {
                     let step = self.current_step;
                     self.sequence = self.load_system().get_step(step);
                 }
-                WindowEvent::Key(Key::Subtract, Action::Press, Modifiers::Shift) => {
-                    self.dist -= f32::from(self.dist > 0.0);
+                WindowEvent::Key(Key::Subtract, Action::Press, modifier) => {
+                    if modifier == Modifiers::Control {
+                        self.dist -= f32::from(self.dist > 0.0);
+                    }
+                    if modifier == Modifiers::Alt && self.delta >= 0.0 {
+                        self.delta -= 1.0_f32.to_radians()
+                    }
                 }
-                WindowEvent::Key(Key::Add, Action::Press, Modifiers::Shift) => {
-                    self.dist += 1.0;
+                WindowEvent::Key(Key::Add, Action::Press, modifier) => {
+                    if modifier == Modifiers::Control {
+                        self.dist += 1.0;
+                    }
+                    if modifier == Modifiers::Alt && self.delta < 360.0_f32.to_radians() {
+                        self.delta += 1.0_f32.to_radians()
+                    }
                 }
                 _ => {},
             }
@@ -179,7 +189,6 @@ impl Renderer {
 
     fn load_system(&mut self) -> &mut LSystem {
         let model = &self.loaded_configs[self.current_model_idx];
-        self.delta = model.delta.to_radians();
         if self.lsystem.contains_key(&model.name) {
             self.lsystem.get_mut(&model.name).unwrap()
         } else {
