@@ -189,6 +189,7 @@ impl Renderer {
 
     fn load_system(&mut self) -> &mut LSystem {
         let model = &self.loaded_configs[self.current_model_idx];
+        self.delta = model.delta.to_radians();
         if self.lsystem.contains_key(&model.name) {
             self.lsystem.get_mut(&model.name).unwrap()
         } else {
