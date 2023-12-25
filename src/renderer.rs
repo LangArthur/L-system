@@ -98,7 +98,7 @@ impl Renderer {
         let mut renderer = Self {
             win: Window::new("L-System"),
             pen: Drawer::new(point![0.0, 0.0], 0.5 * PI),
-            dist: 50.0,
+            dist: 10.0,
             loaded_configs: Self::load_config()
                 .map_err(|err| eprintln!("Failed to read config: {}", err))
                 .unwrap_or_else(|_| vec![]),
@@ -174,6 +174,11 @@ impl Renderer {
                     if modifier == Modifiers::Alt && self.delta < 360.0_f32.to_radians() {
                         self.delta += 1.0_f32.to_radians()
                     }
+                }
+                WindowEvent::Key(Key::R, Action::Press, _) => {
+                    self.load_system().reset();
+                    let step = self.current_step.clone();
+                    self.sequence = self.load_system().get_step(step);
                 }
                 _ => {},
             }

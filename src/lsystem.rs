@@ -70,4 +70,8 @@ impl LSystem {
             self.steps.last().unwrap().clone()
         }
     }
+
+    pub fn reset(&mut self) {
+        self.steps.clear();
+    }
 }
