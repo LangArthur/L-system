@@ -2,11 +2,9 @@ heather:
   axiom: X
   rules:
     'X':
-      - prob: 1
-        production: F[+X]F[-X]+X
+      - production: F[+X]F[-X]+X
     'F':
-      - prob: 1
-        production: FF
+      - production: FF
   delta: 20.0
 
 wild_carrot:
