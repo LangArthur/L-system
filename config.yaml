@@ -17,7 +17,7 @@ wild_carrot:
         production: F[+F]F[-F][F]
   delta: 20.0
 
-stoch_example:
+stochastic_example:
   axiom: F
   rules:
     'F': 

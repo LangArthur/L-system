@@ -6,6 +6,7 @@ mod renderer;
 mod config;
 mod math;
 mod error;
+mod utility;
 
 fn main() {
     let mut renderer = renderer::Renderer::new();
