@@ -1,18 +1,39 @@
 use std::collections::HashMap;
+use rand::Rng;
+
+use crate::config::Rule;
 
 pub struct LSystem {
     axiom: String, // initial state
-    rules: HashMap<char, String>, // rules to apply
+    rules: HashMap<char, Vec<Rule>>, // rules to apply
 
     steps: Vec<String>, // an history of the different steps
 }
 
 impl LSystem {
-    pub fn new(axiom: String, rules: HashMap<char, String>) -> Self {
+    pub fn new(axiom: String, rules: HashMap<char, Vec<Rule>>) -> Self {
         Self {
             axiom,
             rules,
             steps: Vec::<String>::new(),
+        }
+    }
+
+    fn select_rule(rules: &Vec<Rule>) -> &String {
+        let rules_len = rules.len();
+        if rules_len == 1 {
+            return &rules.first().unwrap().production
+        } else {
+            let mut rng = rand::thread_rng();
+            let random_nb: f32 = rng.gen_range(0.0..1.0);
+            let mut i = 0.0f32;
+            for (idx, rule) in rules.into_iter().enumerate() {
+                if random_nb <= i || idx + 1 == rules_len {
+                    return &rule.production;
+                }
+                i += rule.prob;
+            }
+            panic!("No rules found (if you see this, it is a bug)");
         }
     }
 
@@ -22,8 +43,8 @@ impl LSystem {
         }
         let mut new_step = String::new();
         for c in initial_step.chars().into_iter() {
-            if let Some(new_element) = self.rules.get(&c) {
-                new_step.push_str(&new_element);
+            if let Some(rules) = self.rules.get(&c) {
+                new_step.push_str(LSystem::select_rule(rules))
             } else {
                 new_step.push(c);
             }

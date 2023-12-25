@@ -1,35 +1,54 @@
 heather:
   axiom: X
   rules:
-    'X': F[+X]F[-X]+X
-    'F': FF
+    'X':
+      - prob: 1
+        production: F[+X]F[-X]+X
+    'F':
+      - prob: 1
+        production: FF
   delta: 20.0
 
 wild_carrot:
   axiom: F
   rules:
-    'F': F[+F]F[-F][F]
+    'F': 
+      - prob: 1
+        production: F[+F]F[-F][F]
   delta: 20.0
 
-bush:
+stoch_example:
   axiom: F
   rules:
-    'F': FF-[-F+F+F]+[+F-F-F]
-  delta: 22.5
+    'F': 
+      - prob: 0.33
+        production: F[+F]F[-F][F]
+      - prob: 0.33
+        production: F[+F]F
+      - prob: 0.34
+        production: F[-F]
 
-graminae:
-  axiom: X
-  rules:
-    'X': F-[[X]+X]+F[+FX]-X
-    'F': FF
-  delta: 22.5
+  delta: 20.0
 
-test_plant:
-  axiom: X
-  rules:
-    'X': F[+XF]-[F[+FXF]]
-    'F': FF[+F]
-  delta: 22.5
+# bush:
+#   axiom: F
+#   rules:
+#     'F': FF-[-F+F+F]+[+F-F-F]
+#   delta: 22.5
+
+# graminae:
+#   axiom: X
+#   rules:
+#     'X': F-[[X]+X]+F[+FX]-X
+#     'F': FF
+#   delta: 22.5
+
+# test_plant:
+#   axiom: X
+#   rules:
+#     'X': F[+XF]-[F[+FXF]]
+#     'F': FF[+F]
+#   delta: 22.5
 
 # TODO: add central start point
 # - axiom: "F-F-F-F"

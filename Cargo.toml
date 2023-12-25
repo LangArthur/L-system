@@ -10,3 +10,4 @@ kiss3d = ">=0.35.0"
 nalgebra = "0.30"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
+rand = "0.8.5"
