@@ -2,7 +2,10 @@ heather:
   axiom: X
   rules:
     'X':
-      - production: F[+X]F[-X]+X
+      - prob: 0.8
+        production: F[+X]F[-X]+X
+      - prob: 0.2
+        production: F[-X]F[+X]+X
     'F':
       - production: FF
   delta: 20.0
