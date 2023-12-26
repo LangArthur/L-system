@@ -41,28 +41,8 @@ impl Rule {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Model {
     pub axiom: String,
-    // #[serde(deserialize_with = "Model::deserialize_rules")]
     pub rules: HashMap<char, Vec<Rule>>,
     pub delta: f32,
     #[serde(skip, default)]
     pub name: String,
-}
-
-impl Model {
-    // FIXME: enable single string deserialization (see https://github.com/serde-rs/serde/issues/1470)
-    // fn deserialize_rules<'de, D>(deserializer: D) -> Result<HashMap<char, Vec<Rule>>, D::Error>
-    // where
-    //     D: Deserializer<'de>
-    // {
-    //     let mut result = HashMap::<char, Vec<Rule>>::new();
-    //     let sorted_rules: HashMap<char, Vec<String>> = Deserialize::deserialize(deserializer)?;
-    //     for (key, str_rules) in sorted_rules {
-    //         let rules = Vec::<Rule>::new();
-    //         for str_rule in str_rules {
-    //             println!("{}", str_rule);
-    //         }
-    //         result.insert(key, rules);
-    //     }
-    //     Err(serde::de::Error::custom("dummy"))
-    // }
 }
