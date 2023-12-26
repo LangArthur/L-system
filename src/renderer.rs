@@ -119,6 +119,28 @@ impl Renderer {
         renderer
     }
 
+    fn check_config(configs: &Vec<config::Model>) -> Result<(), lsysErr::Error> {
+        for model in configs {
+            if model.delta < 0.0 {
+                return Err(lsysErr::Error::ConfigError { system: model.name.clone(), error: "Delta should be greater than 0".to_string() })
+            }
+            let available_chars = vec![];
+            for (c, rules) in &model.rules {
+                if available_chars.contains(c) {
+                    return Err(lsysErr::Error::ConfigError { system: model.name.clone(), error: format!("Duplicate declarations for {}", c) })
+                }
+                let mut tot_probability = 0.0;
+                for rule in rules {
+                    tot_probability += rule.prob;
+                }
+                if tot_probability != 1.0 {
+                    return Err(lsysErr::Error::ConfigError { system: model.name.clone(), error: format!("Probability sum is not equal to 1") })                    
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn load_config() -> Result<Vec<config::Model>, lsysErr::Error> {
         let file = File::open(CONFIG_FILE)
             .map_err(|err| lsysErr::Error::IOError(err))?;
@@ -129,6 +151,7 @@ impl Renderer {
             model.name = name;
             vec.push(model);
         }
+        Self::check_config(&vec)?;
         Ok(vec)
     }
 
@@ -210,8 +233,7 @@ impl Renderer {
     fn draw(&mut self) {
         // reset pen position
         self.pen.reset();
-        let seq = self.sequence.clone(); // FIXME: find a way to remove this clone
-        for c in seq.chars() {
+        for c in self.sequence.clone().chars() {
             match c {
                 'F' => self.draw_line(),
                 'f' => self.move_pen(),

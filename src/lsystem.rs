@@ -28,10 +28,10 @@ impl LSystem {
             let random_nb: f32 = rng.gen_range(0.0..1.0);
             let mut i = 0.0f32;
             for (idx, rule) in rules.into_iter().enumerate() {
-                if random_nb <= i || idx + 1 == rules_len {
+                i += rule.prob;
+                if random_nb <= i || idx + 1 >= rules_len {
                     return &rule.production;
                 }
-                i += rule.prob;
             }
             panic!("No rules found (if you see this, it is a bug)");
         }
@@ -44,7 +44,7 @@ impl LSystem {
         let mut new_step = String::new();
         for c in initial_step.chars().into_iter() {
             if let Some(rules) = self.rules.get(&c) {
-                new_step.push_str(LSystem::select_rule(rules))
+                new_step.push_str(LSystem::select_rule(rules));
             } else {
                 new_step.push(c);
             }

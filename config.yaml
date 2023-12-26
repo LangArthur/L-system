@@ -32,7 +32,10 @@ bush:
   axiom: F
   rules:
     'F': 
-    - production: FF-[-F+F+F]+[+F-F-F]
+    - prob: 0.9
+      production: FF-[-F+F+F]+[+F-F-F]
+    - prob: 0.1
+      production: FF
   delta: 22.5
 
 graminae:
@@ -44,9 +47,10 @@ graminae:
     - production: FF
   delta: 22.5
 
-# TODO: add central start point
-# - axiom: "F-F-F-F"
+# need a central start point
+# quadratic_koch_island:
+#   axiom: "F-F-F-F"
 #   rules:
-#     - F: "F-F+F+FF-F-F+F"
+#     'F': 
+#     - production: "F-F+F+FF-F-F+F"
 #   delta: 90
-#   name: "quadratic_koch_island"
