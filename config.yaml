@@ -50,6 +50,22 @@ graminae:
     - production: FF
   delta: 22.5
 
+wheat:
+  axiom: A
+  rules:
+    'A':
+    - prob: 0.5
+      production: F[+B]F[-B]-A
+    - prob: 0.5
+      production: F[B]F[B]-A
+    'B':
+    - production: "[+C][-C]-B"
+    'C':
+    - production: F[+F][-F]
+    'F':
+    - production: FF
+  delta: 15
+
 # need a central start point
 # quadratic_koch_island:
 #   axiom: "F-F-F-F"
