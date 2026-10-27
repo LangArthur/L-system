@@ -1,14 +1,14 @@
 extern crate kiss3d;
-extern crate nalgebra as na;
 
-mod lsystem;
-mod renderer;
 mod config;
-mod math;
 mod error;
+mod lsystem;
+mod math;
+mod renderer;
 mod utility;
 
-fn main() {
-    let mut renderer = renderer::Renderer::new();
-    renderer.render();
+#[kiss3d::main]
+async fn main() {
+    let mut renderer = renderer::Renderer::new().await;
+    renderer.render().await;
 }

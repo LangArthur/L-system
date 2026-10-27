@@ -2,30 +2,33 @@ use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::fs::File;
 
+use kiss3d::camera::PanZoomCamera2d;
+use kiss3d::color::Color;
 use kiss3d::event::Action;
 use kiss3d::event::Key;
 use kiss3d::event::Modifiers;
 use kiss3d::event::WindowEvent;
-use na::{Point2, Point3, point};
+use kiss3d::glamx::vec2;
+use kiss3d::glamx::Vec2;
+use kiss3d::scene::SceneNode2d;
 use kiss3d::window::Window;
-use kiss3d::light::Light;
 
-use crate::lsystem::LSystem;
 use crate::config;
-use crate::math;
 use crate::error as lsysErr;
+use crate::lsystem::LSystem;
+use crate::math;
 
 const CONFIG_FILE: &str = "config.yaml";
 
-const COLOR: Point3<f32> = point![0.85f32, 0.66f32, 0.23f32];
+const COLOR: Color = Color::new(0.85f32, 0.66f32, 0.23f32, 1.0);
 // const BG_COLOR: Point3<f32> = point![1.0f32, 0.95f32, 0.83f32];
 
 // drawer instance
 pub struct Drawer {
     /// current position of the drawer
-    position: Point2<f32>,
+    position: Vec2,
     /// the position from which the drawer has started
-    origin_position: Point2<f32>,
+    origin_position: Vec2,
     /// orientation of the drawer
     /// in radian
     angle: f32,
@@ -35,7 +38,7 @@ pub struct Drawer {
 }
 
 impl Drawer {
-    fn new(position: Point2<f32>, angle: f32) -> Self {
+    fn new(position: Vec2, angle: f32) -> Self {
         Self {
             position,
             origin_position: position.clone(),
@@ -67,13 +70,16 @@ impl Drawer {
 
 /// a state which the drawer can reload
 pub struct DrawerState {
-    position: Point2<f32>,
+    position: Vec2,
     angle: f32, // in radian
 }
 
 pub struct Renderer {
     /// active window
     win: Window,
+    camera: PanZoomCamera2d,
+    scene: SceneNode2d,
+
     /// the drawing object
     pen: Drawer,
     /// size of each segment
@@ -94,10 +100,13 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
+        let win = Window::new("L-System").await;
         let mut renderer = Self {
-            win: Window::new("L-System"),
-            pen: Drawer::new(point![0.0, 0.0], 0.5 * PI),
+            win,
+            camera: PanZoomCamera2d::default(),
+            scene: SceneNode2d::empty(),
+            pen: Drawer::new(vec2(0.0, 0.0), 0.5 * PI),
             dist: 10.0,
             loaded_configs: Self::load_config()
                 .map_err(|err| eprintln!("Failed to read config: {}", err))
@@ -112,29 +121,43 @@ impl Renderer {
         let step = renderer.current_step;
         renderer.sequence = renderer.load_system().get_step(step);
         let win_dim = renderer.win.size();
-        renderer.pen.position = point![0.0, -(win_dim.y as f32 / 2.0)];
-        renderer.pen.origin_position = point![0.0, -(win_dim.y as f32 / 2.0)];
-        renderer.win.set_light(Light::StickToCamera);
-        renderer.win.set_background_color(1.0f32, 0.95f32, 0.83f32);
+        renderer.pen.position = vec2(0.0, -(win_dim.y as f32 / 2.0));
+        renderer.pen.origin_position = vec2(0.0, -(win_dim.y as f32 / 2.0));
+        // renderer.win.set_light(Light::StickToCamera);
+        renderer.win.set_background_color(kiss3d::color::Rgba {
+            r: 1.0f32,
+            g: 0.95f32,
+            b: 0.83f32,
+            a: 1.0,
+        });
         renderer
     }
 
     fn check_config(configs: &Vec<config::Model>) -> Result<(), lsysErr::Error> {
         for model in configs {
             if model.delta < 0.0 {
-                return Err(lsysErr::Error::ConfigError { system: model.name.clone(), error: "Delta should be greater than 0".to_string() })
+                return Err(lsysErr::Error::ConfigError {
+                    system: model.name.clone(),
+                    error: "Delta should be greater than 0".to_string(),
+                });
             }
             let available_chars = vec![];
             for (c, rules) in &model.rules {
                 if available_chars.contains(c) {
-                    return Err(lsysErr::Error::ConfigError { system: model.name.clone(), error: format!("Duplicate declarations for {}", c) })
+                    return Err(lsysErr::Error::ConfigError {
+                        system: model.name.clone(),
+                        error: format!("Duplicate declarations for {}", c),
+                    });
                 }
                 let mut tot_probability = 0.0;
                 for rule in rules {
                     tot_probability += rule.prob;
                 }
                 if tot_probability != 1.0 {
-                    return Err(lsysErr::Error::ConfigError { system: model.name.clone(), error: format!("Probability sum is not equal to 1") })                    
+                    return Err(lsysErr::Error::ConfigError {
+                        system: model.name.clone(),
+                        error: format!("Probability sum is not equal to 1"),
+                    });
                 }
             }
         }
@@ -142,10 +165,9 @@ impl Renderer {
     }
 
     fn load_config() -> Result<Vec<config::Model>, lsysErr::Error> {
-        let file = File::open(CONFIG_FILE)
-            .map_err(|err| lsysErr::Error::IOError(err))?;
-        let map: HashMap<String, config::Model> = serde_yaml::from_reader(file)
-            .map_err(|err| lsysErr::Error::SerdeError(err))?;
+        let file = File::open(CONFIG_FILE).map_err(|err| lsysErr::Error::IOError(err))?;
+        let map: HashMap<String, config::Model> =
+            serde_yaml::from_reader(file).map_err(|err| lsysErr::Error::SerdeError(err))?;
         let mut vec = vec![];
         for (name, mut model) in map {
             model.name = name;
@@ -158,8 +180,10 @@ impl Renderer {
     pub fn process_events(&mut self) {
         for event in self.win.events().iter() {
             match event.value {
+                // WindowEvent::Close => self.win.close(),
                 WindowEvent::Key(Key::Right, Action::Press, _) => {
-                    self.current_model_idx = (self.current_model_idx + 1) % self.loaded_configs.len();
+                    self.current_model_idx =
+                        (self.current_model_idx + 1) % self.loaded_configs.len();
                     let step = self.current_step;
                     self.sequence = self.load_system().get_step(step);
                 }
@@ -203,13 +227,13 @@ impl Renderer {
                     let step = self.current_step.clone();
                     self.sequence = self.load_system().get_step(step);
                 }
-                _ => {},
+                _ => {}
             }
         }
     }
 
-    pub fn render(&mut self) {
-        while self.win.render() {
+    pub async fn render(&mut self) {
+        while self.win.render_2d(&mut self.scene, &mut self.camera).await {
             self.process_events();
             self.draw();
         }
@@ -221,10 +245,7 @@ impl Renderer {
         if self.lsystem.contains_key(&model.name) {
             self.lsystem.get_mut(&model.name).unwrap()
         } else {
-            let new_system = LSystem::new(
-                model.axiom.clone(),
-                model.rules.clone(),
-            );
+            let new_system = LSystem::new(model.axiom.clone(), model.rules.clone());
             self.lsystem.insert(model.name.clone(), new_system);
             self.lsystem.get_mut(&model.name).unwrap()
         }
@@ -243,26 +264,26 @@ impl Renderer {
                 ']' => self.pen.load_last_state(),
                 // skipping unknown characters but keeping it since
                 // they can be used for example in node rewriting.
-                _ => {}, 
+                _ => {}
             }
         }
     }
 
     fn draw_line(&mut self) {
         let start = self.pen.position;
-        let end = point![
-            self.pen.position.x + self.dist * (self.pen.angle as f32).cos(),
-            self.pen.position.y + self.dist * (self.pen.angle as f32).sin()
-        ];
-        self.win.draw_planar_line(&start, &end, &COLOR);
+        let end = Vec2 {
+            x: self.pen.position.x + self.dist * (self.pen.angle as f32).cos(),
+            y: self.pen.position.y + self.dist * (self.pen.angle as f32).sin(),
+        };
+        self.win.draw_line_2d(start, end, COLOR, 1.0);
         self.pen.position = end;
     }
 
     fn move_pen(&mut self) {
-        self.pen.position = point![
+        self.pen.position = vec2(
             self.pen.position.x + self.dist * (self.pen.angle as f32).cos(),
-            self.pen.position.y + self.dist * (self.pen.angle as f32).sin()
-        ];
+            self.pen.position.y + self.dist * (self.pen.angle as f32).sin(),
+        );
     }
 
     fn rotate(&mut self, rotation: math::Rotation) {
