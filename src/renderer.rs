@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use std::fs::File;
 
 use kiss3d::camera::PanZoomCamera2d;
-use kiss3d::color::Color;
+use kiss3d::color::*;
 use kiss3d::event::Action;
 use kiss3d::event::Key;
 use kiss3d::event::Modifiers;
@@ -20,8 +20,8 @@ use crate::math;
 
 const CONFIG_FILE: &str = "config.yaml";
 
-const COLOR: Color = Color::new(0.85f32, 0.66f32, 0.23f32, 1.0);
-// const BG_COLOR: Point3<f32> = point![1.0f32, 0.95f32, 0.83f32];
+const COLOR: Color = LINEN;
+const BG_COLOR: Color = GRAY;
 
 // drawer instance
 pub struct Drawer {
@@ -124,12 +124,7 @@ impl Renderer {
         renderer.pen.position = vec2(0.0, -(win_dim.y as f32 / 2.0));
         renderer.pen.origin_position = vec2(0.0, -(win_dim.y as f32 / 2.0));
         // renderer.win.set_light(Light::StickToCamera);
-        renderer.win.set_background_color(kiss3d::color::Rgba {
-            r: 1.0f32,
-            g: 0.95f32,
-            b: 0.83f32,
-            a: 1.0,
-        });
+        renderer.win.set_background_color(BG_COLOR);
         renderer
     }
 
@@ -227,6 +222,7 @@ impl Renderer {
                     let step = self.current_step.clone();
                     self.sequence = self.load_system().get_step(step);
                 }
+                WindowEvent::Key(Key::Escape, Action::Press, _) => self.win.close(),
                 _ => {}
             }
         }
